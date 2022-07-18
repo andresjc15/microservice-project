@@ -1,0 +1,21 @@
+
+spring:
+  application:
+    name: oauth-service
+
+
+
+  config:
+    import=optional:configserver:
+
+server:
+  port: 8100
+
+eureka:
+  instance:
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
+    status-page-url-path: /swagger-ui.html
+
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka

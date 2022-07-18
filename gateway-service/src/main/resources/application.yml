@@ -1,0 +1,98 @@
+
+spring:
+  application:
+    name: gateway-server-service
+  config:
+    import=optional:configserver:
+  cloud:
+    config:
+      uri: http://localhost:8888
+    gateway:
+      routes:
+        - id: product-service
+          uri: lb://product-service
+          predicates:
+            - Path=/product-service/**
+            #validacion - reglas
+            #- Header= token, \d+
+            #- Header=Content-Type,application/json
+            #- Method=GET, POST
+            #- Query=color
+            #- Cookie=color, azul
+
+          filters:
+            #- CircuitBreaker=products
+            - name: CircuitBreaker
+              args:
+                name: product
+                statusCodes: 500
+                fallbackUri: forward:/product-service/api/products
+            - StripPrefix=1
+            - Ex=Mensaje personalizado, usuario, andres
+            #- name: Ex
+            #  args:
+            #    message: Mensaje personalizado
+            #    cookieName: usuario
+            #    cookieValue: andres
+
+        - id: item-service
+          uri: lb://item-service
+          predicates:
+            - Path=/item-service/**
+          filters:
+            - StripPrefix=1
+            - AddRequestHeader=token-request, 741896884631
+            - AddResponseHeader=token-response, 741896884631
+            - SetResponseHeader=Content-Type, text/plain
+            - AddRequestParameter=name, andres
+            #- Ex=Mensaje personalizado, usuario, andres
+            #- name: Ex
+            #  args:
+            #    message: Mensaje personalizado
+            #    cookieName: usuario
+            #    cookieValue: andres
+
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/user-service/**
+          filters:
+            - StripPrefix=1
+        - id: oauth-service
+          uri: lb://oauth-service
+          predicates:
+            - Path=/api/security/**
+          filters:
+            - StripPrefix=2
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      defecto:
+        slidingWindowSize: 6
+        failureRateThreshold: 50
+        waitDurationInOpenState: 20s
+        permittedNumberOfCallsInHalfOpenState: 4
+        slowCallRateThreshold: 2
+      instances:
+        products:
+          base-config: defecto
+  timelimiter:
+    configs:
+      defecto:
+        timeoutDuration: 2s
+      instances:
+        products:
+          base-config: defecto
+
+server:
+  port: 8090
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+
+
+
+
