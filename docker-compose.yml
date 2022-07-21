@@ -1,0 +1,114 @@
+version: '3.7'
+services:
+  config-server:
+    image: config-server:v1
+    ports:
+      - "8888:8888"
+    restart: always
+    networks:
+      - cloudnetwork
+  eureka-server:
+    image: eureka-server:v1
+    ports:
+      - "8761:8761"
+    restart: always
+    networks:
+      - cloudnetwork
+  mysql8:
+    image: mysql:8
+    ports:
+      - "3306:3306"
+    restart: always
+    networks:
+      - cloudnetwork
+    environment: 
+      MYSQL_DATABASE: product-service
+      MYSQL_ROOT_PASSWORD: sasa
+  postgres12:
+    image: postgres:12-alpine
+    ports:
+      - "5432:5432"
+    restart: always
+    networks:
+      - cloudnetwork
+    environment: 
+      POSTGRES_DB: db_springboot_cloud
+      POSTGRES_PASSWORD: sasa
+  product-service:
+    image: product-service:v1
+    restart: always
+    networks:
+      - cloudnetwork
+    depends_on: 
+      - config-server
+      - eureka-server
+      - mysql8
+  item-service:
+    image: item-service:v1
+    restart: always
+    networks:
+      - cloudnetwork
+    depends_on: 
+      - config-server
+      - servicio-eureka-server
+      - product-service
+  user-service:
+    image: user-service:v1
+    restart: always
+    networks:
+      - cloudnetwork
+    depends_on: 
+      - config-server
+      - eureka-server
+      - postgres12
+  oauth-service:
+    image: oauth-service:v1
+    ports:
+      - "9100:9100"
+    restart: always
+    networks:
+      - cloudnetwork
+    depends_on: 
+      - config-server
+      - eureka-server
+      - user-service
+  zuul-server:
+    image: zuul-server:v1
+    ports:
+      - "8090:8090"
+    restart: always
+    networks:
+      - cloudnetwork
+    depends_on: 
+      - config-server
+      - eureka-server
+      - product-service
+      - item-service
+      - user-service
+      - oauth-service
+  rabbitmq38:
+    image: rabbitmq:3.8-management-alpine
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    restart: always
+    networks:
+      - cloudnetwork
+  zipkin-server:
+    image: zipkin-server:v1
+    ports:
+      - "9411:9411"
+    restart: always
+    networks:
+      - cloudnetwork
+    depends_on: 
+      - rabbitmq38
+      - mysql8
+    environment: 
+      RABBIT_ADDRESSES: rabbitmq38:5672
+      STORAGE_TYPE: mysql
+      MYSQL_USER: zipkin
+      MYSQL_PASS: zipkin
+      MYSQL_HOST: mysql8
+networks:
+  cloudnetwork:

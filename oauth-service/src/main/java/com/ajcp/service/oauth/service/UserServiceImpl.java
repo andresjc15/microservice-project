@@ -1,5 +1,6 @@
 package com.ajcp.service.oauth.service;
 
+import brave.Tracer;
 import com.ajcp.service.common.user.model.entity.UserModel;
 import com.ajcp.service.oauth.client.UserFeignClient;
 import feign.FeignException;
@@ -23,6 +24,9 @@ public class UserServiceImpl implements UserDetailsService, UserService {
     @Autowired
     private UserFeignClient client;
 
+    @Autowired
+    private Tracer tracer;
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 
@@ -40,8 +44,11 @@ public class UserServiceImpl implements UserDetailsService, UserService {
             return new User(user.getUsername(), user.getPassword(), user.isEnabled(), true,
                     true, true, authorities);
         } catch (FeignException e) {
-            log.error("[ERROR]: Error in login, User doesn't exist");
-            throw new UsernameNotFoundException("Error in login, User doesn't exist");
+            String message = "[ERROR]: Error in login, User doesn't exist";
+            log.error(message);
+
+            tracer.currentSpan().tag("error.message", message +  ":" + e.getMessage());
+            throw new UsernameNotFoundException(message);
         }
 
     }
